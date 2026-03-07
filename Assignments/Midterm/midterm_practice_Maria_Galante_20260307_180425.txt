@@ -1,0 +1,90 @@
+==========================================
+  COP2250 MIDTERM PRACTICE QUIZ REPORT
+==========================================
+  Student: Maria Galante
+  Date:    2026-03-07 18:04:25
+  Score:   15 / 15
+  Pct:     100%
+==========================================
+
+Question 1: [CH2 - VARIABLES] What's the difference between int and double?
+  Student answer:  int stores whole numbers while double stores decimal numbers
+  Correct answer:  int stores whole numbers (no decimals). double stores floating-point numbers (with decimals).
+  Self-assessed:   YES
+
+Question 2: [CH6 - METHODS] What is method overloading?
+  Student answer:  multiple methods with the same name but different parameter lists
+  Correct answer:  Defining multiple methods with the SAME name but DIFFERENT parameter lists (different number or types of parameters).
+  Self-assessed:   YES
+
+Question 3: [CH1 - INTRO] What does the Java compiler (javac) produce?
+  Student answer:  .class file
+  Correct answer:  Bytecode — a .class file that the JVM (Java Virtual Machine) can execute.
+  Self-assessed:   YES
+
+Question 4: [CH6 - METHODS] Can you define a method inside main()? Why or why not?
+  Student answer:  no
+  Correct answer:  No. Compile error. Java doesn't allow nested methods. Methods go inside the class but outside main.
+  Self-assessed:   YES
+
+Question 5: [CH4 - MATH/STRING] What is the difference between 'A' (char) and "A" (String)?
+  Student answer:  single quotes single character (char literal) and double qoutes text object (string object)
+  Correct answer:  'A' is a char literal (single character, primitive). "A" is a String object (even though it has one character).
+  Self-assessed:   YES
+
+Question 6: [CH1 - INTRO] What's the difference between print() and println()?
+  Student answer:  print() outputs text and stays on the same line while println() outputs text and moves to the next line
+  Correct answer:  print() outputs text and stays on the same line. println() outputs text and adds a newline character.
+  Self-assessed:   YES
+
+Question 7: [CH6 - METHODS] What is the difference between a parameter and an argument?
+  Student answer:  parameter is the method definition and argument is the value passed when calling the method
+  Correct answer:  A parameter is the variable in the method definition. An argument is the actual value passed when calling the method.
+  Self-assessed:   YES
+
+Question 8: [TERMINAL] What two terminal commands compile and run Hello.java?
+  Student answer:  javac Hello.java then java Hello
+  Correct answer:  javac Hello.java (compile to bytecode) then java Hello (run — no .java extension).
+  Self-assessed:   YES
+
+Question 9: [CH3 - SELECTIONS] When would you use a switch statement instead of if-else?
+  Student answer:  when comparing one variable against many constant values
+  Correct answer:  When comparing ONE variable against multiple specific constant values (like menu options). Switch is cleaner than a long if-else chain.
+  Self-assessed:   YES
+
+Question 10: [CH5 - LOOPS] What does 'break' do inside a loop? What about 'continue'?
+  Student answer:  break exits the loop. continue skips the current iteration and goes to next
+  Correct answer:  break exits the loop entirely. continue skips the rest of the current iteration and goes to the next one.
+  Self-assessed:   YES
+
+Question 11: [CH7 - ARRAYS] How do you declare and create an array of 10 integers?
+  Student answer:  int[] numbers = new int[10];
+  Correct answer:  int[] numbers = new int[10]; — declares and allocates space for 10 int values (all default to 0).
+  Self-assessed:   YES
+
+Question 12: [CH7 - ARRAYS] What happens if you access array index [10] on an array of size 10?
+  Student answer:  ArrayIndexOutOfBoundsException
+  Correct answer:  ArrayIndexOutOfBoundsException — valid indices are 0-9.
+  Self-assessed:   YES
+
+Question 13: [CH5 - LOOPS] What is an infinite loop and how does it happen?
+  Student answer:  a loop that never stops running because its condition never becomes false (or variable never updates or wrong condition)
+  Correct answer:  A loop that never ends because its condition never becomes false. Example: while(true) or forgetting to update the loop variable.
+  Self-assessed:   YES
+
+Question 14: [TERMINAL] What does 'pwd' stand for and what does it do?
+  Student answer:  Print Working Directory and it shows the full path of your current location in the filesystem
+  Correct answer:  Print Working Directory. Shows the full path of your current location in the filesystem.
+  Self-assessed:   YES
+
+Question 15: [TERMINAL] What does 'cd ..' do? What about 'cd ~'?
+  Student answer:  cd .. goes up one directory and cd ~ goes to your home direcory
+  Correct answer:  cd .. goes up one directory. cd ~ goes to your home directory.
+  Self-assessed:   YES
+
+==========================================
+  Generated: 2026-03-07 18:04:25
+  Pool: 40 questions
+  Asked: 15 questions
+  This report is auto-generated.
+==========================================
