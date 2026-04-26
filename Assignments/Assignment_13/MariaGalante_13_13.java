@@ -146,7 +146,7 @@ public class MariaGalante_13_13 {
             GeometricObject obj1,
             GeometricObject obj2) {
 
-        return obj1.getArea() == obj2.getArea();
+        return Math.abs(obj1.getArea() - obj2.getArea()) < 0.0001;
     }
 
     // -------------------------------------------------------
@@ -156,7 +156,9 @@ public class MariaGalante_13_13 {
             GeometricObject obj1,
             GeometricObject obj2) {
 
-        return obj1.getPerimeter() == obj2.getPerimeter();
+        return Math.abs(
+                obj1.getPerimeter()
+              - obj2.getPerimeter()) < 0.0001;
     }
 }
 
@@ -189,7 +191,9 @@ class Rectangle_MG extends GeometricObject
     }
 
     public void howToColor() {
-        System.out.println("Color all four sides.");
+        System.out.println(
+            "Color the rectangle with width "
+            + width + " and height " + length + ".");
     }
 }
 
@@ -219,7 +223,9 @@ class Circle_MG extends GeometricObject
     }
 
     public void howToColor() {
-        System.out.println("Color the circle.");
+        System.out.println(
+            "Color the circle with radius "
+            + radius + ".");
     }
 }
 
@@ -262,7 +268,11 @@ class Triangle_MG extends GeometricObject
     }
 
     public void howToColor() {
-        System.out.println("Color all three sides.");
+        System.out.println(
+            "Color the triangle with sides "
+            + side1 + ", "
+            + side2 + ", "
+            + side3 + ".");
     }
 }
 
