@@ -6,55 +6,157 @@
  * Name: Maria Galante
  * Date: 4-26-2026
  *
- * This program demonstrates the use of an abstract class,
- * inheritance, interfaces, and polymorphism by creating
- * Circle and Rectangle objects through GeometricObject
- * references. It displays area, perimeter, color, and
- * how each object should be colored.
- *
- * All classes go in this one file.
+ * This program demonstrates abstract classes, interfaces,
+ * inheritance, and polymorphism using geometric objects.
+ * It creates Circle, Rectangle, and Triangle objects,
+ * displays area, perimeter, color, and how to color them.
  */
 
 // -------------------------------------------------------
-// STEP 1 - Colorable interface
-// One method: void howToColor()
+// Public class with main method.
 // -------------------------------------------------------
-interface Colorable {
+public class MariaGalante_13_13 {
 
-    // Method to describe how object is colored.
-    void howToColor();
+    public static void main(String[] args) {
+
+        // Use try/catch to prevent program crash.
+        try {
+
+            // Create objects using GeometricObject references.
+            GeometricObject r = new Rectangle_MG(4.0, 6.0, "blue");
+            GeometricObject c = new Circle_MG(5.0, "red");
+            GeometricObject t = new Triangle_MG(3.0, 4.0, 5.0, "green");
+
+            // Display rectangle information.
+            System.out.println("--- Rectangle ---");
+            System.out.println(r);
+            ((Colorable) r).howToColor();
+
+            System.out.println();
+
+            // Display circle information.
+            System.out.println("--- Circle ---");
+            System.out.println(c);
+            ((Colorable) c).howToColor();
+
+            System.out.println();
+
+            // Display triangle information.
+            System.out.println("--- Triangle ---");
+            System.out.println(t);
+            ((Colorable) t).howToColor();
+        }
+
+        // Catch unexpected errors.
+        catch (Exception e) {
+            System.out.println("An error occurred.");
+        }
+    }
 }
 
 // -------------------------------------------------------
-// STEP 2 - Abstract class GeometricObject
-// private String color
-// Constructor: GeometricObject(String color)
-// getColor(): returns color
-// abstract getArea()
-// abstract getPerimeter()
-// toString(): returns color, area, perimeter
+// Rectangle class.
+// -------------------------------------------------------
+class Rectangle_MG extends GeometricObject implements Colorable {
+
+    private double width;
+    private double height;
+
+    public Rectangle_MG(double width, double height, String color) {
+        super(color);
+        this.width = width;
+        this.height = height;
+    }
+
+    public double getArea() {
+        return width * height;
+    }
+
+    public double getPerimeter() {
+        return 2 * (width + height);
+    }
+
+    public void howToColor() {
+        System.out.println("Color all four sides.");
+    }
+}
+
+// -------------------------------------------------------
+// Circle class.
+// -------------------------------------------------------
+class Circle_MG extends GeometricObject implements Colorable {
+
+    private double radius;
+
+    public Circle_MG(double radius, String color) {
+        super(color);
+        this.radius = radius;
+    }
+
+    public double getArea() {
+        return Math.PI * radius * radius;
+    }
+
+    public double getPerimeter() {
+        return 2 * Math.PI * radius;
+    }
+
+    public void howToColor() {
+        System.out.println("Color the entire circle.");
+    }
+}
+
+// -------------------------------------------------------
+// Triangle class.
+// -------------------------------------------------------
+class Triangle_MG extends GeometricObject implements Colorable {
+
+    private double side1;
+    private double side2;
+    private double side3;
+
+    public Triangle_MG(double side1, double side2, double side3, String color) {
+        super(color);
+        this.side1 = side1;
+        this.side2 = side2;
+        this.side3 = side3;
+    }
+
+    public double getArea() {
+
+        // Use Heron's formula.
+        double s = getPerimeter() / 2;
+        return Math.sqrt(s * (s - side1) * (s - side2) * (s - side3));
+    }
+
+    public double getPerimeter() {
+        return side1 + side2 + side3;
+    }
+
+    public void howToColor() {
+        System.out.println("Color all three sides.");
+    }
+}
+
+// -------------------------------------------------------
+// Abstract GeometricObject class.
 // -------------------------------------------------------
 abstract class GeometricObject {
 
-    // Store color of object.
     private String color;
 
-    // Constructor to set color.
     public GeometricObject(String color) {
         this.color = color;
     }
 
-    // Return color.
     public String getColor() {
         return color;
     }
 
-    // Abstract methods.
     public abstract double getArea();
 
     public abstract double getPerimeter();
 
-    // Return object information.
     public String toString() {
         return "Color: " + color +
                "\nArea: " + getArea() +
@@ -63,106 +165,9 @@ abstract class GeometricObject {
 }
 
 // -------------------------------------------------------
-// STEP 3 - Circle extends GeometricObject implements Colorable
-// private double radius
-// Constructor: Circle(double radius, String color)
-// getArea(), getPerimeter(), howToColor()
+// Colorable interface.
 // -------------------------------------------------------
-class Circle extends GeometricObject implements Colorable {
+interface Colorable {
 
-    // Store radius.
-    private double radius;
-
-    // Constructor.
-    public Circle(double radius, String color) {
-        super(color);
-        this.radius = radius;
-    }
-
-    // Return area.
-    public double getArea() {
-        return Math.PI * radius * radius;
-    }
-
-    // Return perimeter.
-    public double getPerimeter() {
-        return 2 * Math.PI * radius;
-    }
-
-    // Describe coloring.
-    public void howToColor() {
-        System.out.println("Color the entire circle.");
-    }
-}
-
-// -------------------------------------------------------
-// STEP 4 - Rectangle extends GeometricObject implements Colorable
-// private double width, height
-// Constructor: Rectangle(double width, double height, String color)
-// getArea(), getPerimeter(), howToColor()
-// -------------------------------------------------------
-class Rectangle extends GeometricObject implements Colorable {
-
-    // Store dimensions.
-    private double width;
-    private double height;
-
-    // Constructor.
-    public Rectangle(double width, double height, String color) {
-        super(color);
-        this.width = width;
-        this.height = height;
-    }
-
-    // Return area.
-    public double getArea() {
-        return width * height;
-    }
-
-    // Return perimeter.
-    public double getPerimeter() {
-        return 2 * (width + height);
-    }
-
-    // Describe coloring.
-    public void howToColor() {
-        System.out.println("Color all four sides.");
-    }
-}
-
-// -------------------------------------------------------
-// STEP 5 - Main: test both classes
-// Store in GeometricObject references
-// Print toString() and call howToColor() on each
-// -------------------------------------------------------
-public class MariaGalante_13_13 {
-
-    public static void main(String[] args) {
-
-        // Use try/catch to handle unexpected program errors.
-        try {
-
-            // Create objects using GeometricObject references.
-            GeometricObject c = new Circle(5.0, "red");
-            GeometricObject r = new Rectangle(4.0, 6.0, "blue");
-
-            // Display circle information.
-            System.out.println("--- Circle ---");
-            System.out.println(c);
-            ((Colorable) c).howToColor();
-
-            // Blank line for spacing.
-            System.out.println();
-
-            // Display rectangle information.
-            System.out.println("--- Rectangle ---");
-            System.out.println(r);
-            ((Colorable) r).howToColor();
-        }
-
-        // Catch any unexpected exception.
-        catch (Exception e) {
-            System.out.println("An error occurred.");
-        }
-    }
+    void howToColor();
 }
