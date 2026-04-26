@@ -1,16 +1,20 @@
 /**
  * MariaGalante_13_13.java
  * COP 2250 - Assignment 13
- * Abstract Classes and Interfaces (Liang Ch. 13)
+ * Chapter 13: Abstract Classes and Interfaces
  *
  * Name: Maria Galante
  * Date: 4-26-2026
  *
- * This program demonstrates abstract classes, interfaces,
- * inheritance, and polymorphism using geometric objects.
- * It creates Circle, Rectangle, and Triangle objects,
- * displays area, perimeter, color, and how to color them.
+ * This program creates Rectangle, Circle, and Triangle
+ * objects using inheritance from an abstract class.
+ * The program asks the user for dimensions, color,
+ * and filled status. It displays area, perimeter,
+ * color, and whether filled. It also compares areas
+ * and perimeters using GeometricObject references.
  */
+
+import java.util.Scanner;
 
 // -------------------------------------------------------
 // Public class with main method.
@@ -19,61 +23,169 @@ public class MariaGalante_13_13 {
 
     public static void main(String[] args) {
 
-        // Use try/catch to prevent program crash.
+        // Create Scanner for user input.
+        Scanner input = new Scanner(System.in);
+
         try {
 
-            // Create objects using GeometricObject references.
-            GeometricObject r = new Rectangle_MG(4.0, 6.0, "blue");
-            GeometricObject c = new Circle_MG(5.0, "red");
-            GeometricObject t = new Triangle_MG(3.0, 4.0, 5.0, "green");
+            // ---------------------------------------------------
+            // Rectangle input
+            // ---------------------------------------------------
+            System.out.print("Enter rectangle length: ");
+            double length = input.nextDouble();
 
-            // Display rectangle information.
-            System.out.println("--- Rectangle ---");
-            System.out.println(r);
-            ((Colorable) r).howToColor();
+            System.out.print("Enter rectangle width: ");
+            double width = input.nextDouble();
 
-            System.out.println();
+            input.nextLine();
 
-            // Display circle information.
-            System.out.println("--- Circle ---");
-            System.out.println(c);
-            ((Colorable) c).howToColor();
+            System.out.print("Enter rectangle color: ");
+            String rectColor = input.nextLine();
 
-            System.out.println();
+            System.out.print("Is rectangle filled (true/false): ");
+            boolean rectFilled = input.nextBoolean();
 
-            // Display triangle information.
-            System.out.println("--- Triangle ---");
-            System.out.println(t);
-            ((Colorable) t).howToColor();
+            // ---------------------------------------------------
+            // Circle input
+            // ---------------------------------------------------
+            System.out.print("\nEnter circle radius: ");
+            double radius = input.nextDouble();
+
+            input.nextLine();
+
+            System.out.print("Enter circle color: ");
+            String circleColor = input.nextLine();
+
+            System.out.print("Is circle filled (true/false): ");
+            boolean circleFilled = input.nextBoolean();
+
+            // ---------------------------------------------------
+            // Triangle input
+            // ---------------------------------------------------
+            System.out.print("\nEnter triangle side 1: ");
+            double side1 = input.nextDouble();
+
+            System.out.print("Enter triangle side 2: ");
+            double side2 = input.nextDouble();
+
+            System.out.print("Enter triangle side 3: ");
+            double side3 = input.nextDouble();
+
+            input.nextLine();
+
+            System.out.print("Enter triangle color: ");
+            String triColor = input.nextLine();
+
+            System.out.print("Is triangle filled (true/false): ");
+            boolean triFilled = input.nextBoolean();
+
+            // ---------------------------------------------------
+            // Create objects using polymorphism
+            // ---------------------------------------------------
+            GeometricObject rect =
+                new Rectangle_MG(length, width, rectColor, rectFilled);
+
+            GeometricObject circle =
+                new Circle_MG(radius, circleColor, circleFilled);
+
+            GeometricObject tri =
+                new Triangle_MG(side1, side2, side3, triColor, triFilled);
+
+            // ---------------------------------------------------
+            // Display Rectangle
+            // ---------------------------------------------------
+            System.out.println("\n--- Rectangle ---");
+            System.out.println(rect);
+            ((Colorable) rect).howToColor();
+
+            // ---------------------------------------------------
+            // Display Circle
+            // ---------------------------------------------------
+            System.out.println("\n--- Circle ---");
+            System.out.println(circle);
+            ((Colorable) circle).howToColor();
+
+            // ---------------------------------------------------
+            // Display Triangle
+            // ---------------------------------------------------
+            System.out.println("\n--- Triangle ---");
+            System.out.println(tri);
+            ((Colorable) tri).howToColor();
+
+            // ---------------------------------------------------
+            // Compare Areas
+            // ---------------------------------------------------
+            System.out.println("\nRectangle and Circle equal area: "
+                    + equalArea(rect, circle));
+
+            // ---------------------------------------------------
+            // Compare Perimeters
+            // ---------------------------------------------------
+            System.out.println("Rectangle and Circle equal perimeter: "
+                    + equalPerimeter(rect, circle));
+
+            System.out.println("Rectangle and Triangle equal perimeter: "
+                    + equalPerimeter(rect, tri));
+
+            System.out.println("Circle and Triangle equal perimeter: "
+                    + equalPerimeter(circle, tri));
         }
 
-        // Catch unexpected errors.
+        // Catch invalid input errors.
         catch (Exception e) {
-            System.out.println("An error occurred.");
+            System.out.println("Invalid input entered.");
         }
+
+        input.close();
+    }
+
+    // -------------------------------------------------------
+    // Compare area of two objects.
+    // -------------------------------------------------------
+    public static boolean equalArea(
+            GeometricObject obj1,
+            GeometricObject obj2) {
+
+        return obj1.getArea() == obj2.getArea();
+    }
+
+    // -------------------------------------------------------
+    // Compare perimeter of two objects.
+    // -------------------------------------------------------
+    public static boolean equalPerimeter(
+            GeometricObject obj1,
+            GeometricObject obj2) {
+
+        return obj1.getPerimeter() == obj2.getPerimeter();
     }
 }
 
 // -------------------------------------------------------
 // Rectangle class.
 // -------------------------------------------------------
-class Rectangle_MG extends GeometricObject implements Colorable {
+class Rectangle_MG extends GeometricObject
+        implements Colorable {
 
+    private double length;
     private double width;
-    private double height;
 
-    public Rectangle_MG(double width, double height, String color) {
-        super(color);
+    public Rectangle_MG(
+            double length,
+            double width,
+            String color,
+            boolean filled) {
+
+        super(color, filled);
+        this.length = length;
         this.width = width;
-        this.height = height;
     }
 
     public double getArea() {
-        return width * height;
+        return length * width;
     }
 
     public double getPerimeter() {
-        return 2 * (width + height);
+        return 2 * (length + width);
     }
 
     public void howToColor() {
@@ -84,12 +196,17 @@ class Rectangle_MG extends GeometricObject implements Colorable {
 // -------------------------------------------------------
 // Circle class.
 // -------------------------------------------------------
-class Circle_MG extends GeometricObject implements Colorable {
+class Circle_MG extends GeometricObject
+        implements Colorable {
 
     private double radius;
 
-    public Circle_MG(double radius, String color) {
-        super(color);
+    public Circle_MG(
+            double radius,
+            String color,
+            boolean filled) {
+
+        super(color, filled);
         this.radius = radius;
     }
 
@@ -102,21 +219,28 @@ class Circle_MG extends GeometricObject implements Colorable {
     }
 
     public void howToColor() {
-        System.out.println("Color the entire circle.");
+        System.out.println("Color the circle.");
     }
 }
 
 // -------------------------------------------------------
 // Triangle class.
 // -------------------------------------------------------
-class Triangle_MG extends GeometricObject implements Colorable {
+class Triangle_MG extends GeometricObject
+        implements Colorable {
 
     private double side1;
     private double side2;
     private double side3;
 
-    public Triangle_MG(double side1, double side2, double side3, String color) {
-        super(color);
+    public Triangle_MG(
+            double side1,
+            double side2,
+            double side3,
+            String color,
+            boolean filled) {
+
+        super(color, filled);
         this.side1 = side1;
         this.side2 = side2;
         this.side3 = side3;
@@ -124,9 +248,13 @@ class Triangle_MG extends GeometricObject implements Colorable {
 
     public double getArea() {
 
-        // Use Heron's formula.
         double s = getPerimeter() / 2;
-        return Math.sqrt(s * (s - side1) * (s - side2) * (s - side3));
+
+        return Math.sqrt(
+                s *
+                (s - side1) *
+                (s - side2) *
+                (s - side3));
     }
 
     public double getPerimeter() {
@@ -139,18 +267,27 @@ class Triangle_MG extends GeometricObject implements Colorable {
 }
 
 // -------------------------------------------------------
-// Abstract GeometricObject class.
+// Abstract class GeometricObject.
 // -------------------------------------------------------
 abstract class GeometricObject {
 
     private String color;
+    private boolean filled;
 
-    public GeometricObject(String color) {
+    public GeometricObject(
+            String color,
+            boolean filled) {
+
         this.color = color;
+        this.filled = filled;
     }
 
     public String getColor() {
         return color;
+    }
+
+    public boolean isFilled() {
+        return filled;
     }
 
     public abstract double getArea();
@@ -158,14 +295,16 @@ abstract class GeometricObject {
     public abstract double getPerimeter();
 
     public String toString() {
+
         return "Color: " + color +
+               "\nFilled: " + filled +
                "\nArea: " + getArea() +
                "\nPerimeter: " + getPerimeter();
     }
 }
 
 // -------------------------------------------------------
-// Colorable interface.
+// Interface Colorable.
 // -------------------------------------------------------
 interface Colorable {
 
