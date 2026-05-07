@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Castle Escape</title>
+
+  <!-- Google Fonts: Cinzel for titles/buttons, IM Fell English for story text -->
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset — remove all default browser spacing ── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Root — fills the whole browser window, no scrollbar ── */
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+
+    /* ── Game container — pinned to corners, truly fullscreen ── */
+    #game {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Background scene image — stretches to fill the whole screen ── */
+    #scene-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0; /* behind everything */
+    }
+
+    /* ── Vignette — dark gradient overlay so text is readable ── */
+    #vignette {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background:
+        linear-gradient(to bottom,
+          rgba(0,0,0,0.6)  0%,
+          rgba(0,0,0,0)    25%,
+          rgba(0,0,0,0)    55%,
+          rgba(0,0,0,0.85) 100%);
+      pointer-events: none;
+    }
+
+    /* ── Rat sprite — positioned absolutely, animated by JS ── */
+    #rat {
+      position: absolute;
+      width: 10vw;
+      max-width: 120px;
+      min-width: 60px;
+      bottom: 22%;
+      left: -15%;
+      display: none; /* hidden until JS calls ratShow() */
+      z-index: 3;
+      image-rendering: pixelated;
+    }
+
+    /* ── Rat angry animation — bounces when player is wrong ── */
+    #rat.angry { animation: angryJump 0.3s ease-in-out infinite; }
+
+    /* ── Rat happy animation — spins when player is correct ── */
+    #rat.happy { animation: happySpin 0.5s ease-in-out infinite; }
+
+    @keyframes angryJump {
+      0%,100% { transform: translateY(0) rotate(-4deg); }
+      50%      { transform: translateY(-14px) rotate(4deg); }
+    }
+    @keyframes happySpin {
+      0%   { transform: translateY(0) rotate(0deg); }
+      25%  { transform: translateY(-20px) rotate(-20deg); }
+      50%  { transform: translateY(0) rotate(0deg); }
+      75%  { transform: translateY(-12px) rotate(20deg); }
+      100% { transform: translateY(0) rotate(0deg); }
+    }
+
+    /* ── Speech bubble — appears above the rat when it talks ── */
+    #speech-bubble {
+      position: absolute;
+      z-index: 4;
+      background: rgba(8, 6, 2, 0.9);
+      border: 1px solid #3d8a53;
+      padding: 0.6rem 1rem;
+      font-family: 'IM Fell English', serif;
+      font-size: clamp(10px, 1.3vw, 15px);
+      color: #8fbf8f;
+      max-width: 22vw;
+      line-height: 1.55;
+      border-radius: 3px;
+      display: none; /* hidden until ratSay() is called */
+      bottom: 44%;
+      left: 10%;
+      pointer-events: none;
+      animation: popIn 0.2s ease;
+      border-radius: 30px;
+    }
+    #speech-bubble.visible { display: block; }
+
+    /* ── Triangle tail on the speech bubble ── */
+    #speech-bubble::after {
+      content: "";
+      position: absolute;
+      bottom: -8px; left: 18px;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-top: 8px solid #7a6040;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.6); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    /* ── Flash overlay — goes solid black during scene transitions ── */
+    #flash {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      background: #000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    #flash.on { opacity: 1; }
+
+    /* ════════════════════════════════════════════
+       All interactive UI sits at z-index 5
+    ════════════════════════════════════════════ */
+
+    /* ── HUD bar — player name, keys, and lives at the top ── */
+    #hud {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 5;
+      padding: 1.2vh 2vw;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, transparent 100%);
+    }
+
+    #hud-name {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(10px, 1.4vw, 16px);
+      color: #c9b99a;
+      letter-spacing: 0.12em;
+    }
+
+    /* ── Wrapper for the dot icons (keys / lives) ── */
+    .hud-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: 'Cinzel', serif;
+      font-size: clamp(9px, 1.1vw, 13px);
+      color: #7a6a55;
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Individual dot — grey by default ── */
+    .dot {
+      display: inline-block;
+      width: clamp(7px, 0.9vw, 12px);
+      height: clamp(7px, 0.9vw, 12px);
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid #3a2e1e;
+      margin-left: 3px;
+    }
+    .dot.key-on   { background: #e8c84a; border-color: #a88820; } /* gold = key collected */
+    .dot.skull-on { background: #b85c5c; border-color: #7a2020; } /* red  = mistake made  */
+
+    /* ── Room label — fades in at top when entering a new area ── */
+    #room-label {
+      position: absolute;
+      top: 10vh;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      font-family: 'Cinzel', serif;
+      font-size: clamp(10px, 1.5vw, 16px);
+      letter-spacing: 0.2em;
+      color: rgba(200, 180, 130, 0.65);
+      text-transform: uppercase;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    #room-label.visible { opacity: 1; }
+
+    /* ── Dialogue box — dark panel at the bottom for text and buttons ── */
+    #dialogue-box {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      z-index: 5;
+      padding: 2vh 3vw 3vh;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2vh;
+      background: linear-gradient(to top,
+        rgba(0,0,0,0.92) 0%,
+        rgba(0,0,0,0.7)  60%,
+        transparent      100%);
+      min-height: 28vh;
+      justify-content: flex-end;
+    }
+
+    /* ── Text log — story lines appear here, max 3 at a time ── */
+    #text-log {
+      font-size: clamp(11px, 1.5vw, 17px);
+      color: #c9b99a;
+      line-height: 1.75;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 0.2em;
+    }
+    #text-log p          { margin: 0; }
+    #text-log p.rat-text { color: #8fbf8f; font-style: italic; } /* rat speech  */
+    #text-log p.system   { color: #7a6a55; font-size: 0.85em; }  /* hints/info  */
+    #text-log p.good     { color: #7db87d; }                     /* correct     */
+    #text-log p.bad      { color: #c05c5c; }                     /* wrong       */
+
+    /* ── Button area ── */
+    #btn-area {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8vw;
+      z-index: 5;
+    }
+
+    /* ── Individual button style ── */
+    .btn {
+      position: relative;
+      z-index: 5;
+      font-family: 'Cinzel', serif;
+      font-size: clamp(9px, 1.1vw, 14px);
+      letter-spacing: 0.1em;
+      padding: 0.7vh 1.5vw;
+      background: rgba(6, 4, 2, 0.85);
+      color: #c9b99a;
+      border: 1px solid #3a2a10;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover     { background: rgba(35,22,5,0.95); border-color: #8a6030; color: #f0e0b0; }
+    .btn.highlight { border-color: #7db87d; color: #7db87d; }
+    .btn.danger    { border-color: #b85c5c; color: #b85c5c; }
+
+    /* ── Text input area ── */
+    #input-area {
+      display: flex;
+      gap: 0.8vw;
+      z-index: 5;
+    }
+
+    #player-input {
+      position: relative;
+      z-index: 5;
+      flex: 1;
+      background: rgba(6,4,2,0.85);
+      border: 1px solid #3a2a10;
+      color: #c9b99a;
+      font-family: 'IM Fell English', serif;
+      font-size: clamp(11px, 1.4vw, 16px);
+      padding: 0.7vh 1.2vw;
+      outline: none;
+    }
+    #player-input::placeholder { color: #4a3520; }
+    #player-input:focus { border-color: #7a5020; }
+
+    #btn-submit {
+      position: relative;
+      z-index: 5;
+      font-family: 'Cinzel', serif;
+      font-size: clamp(9px, 1vw, 13px);
+      letter-spacing: 0.1em;
+      padding: 0.7vh 1.5vw;
+      background: rgba(6,4,2,0.85);
+      color: #c9b99a;
+      border: 1px solid #3a2a10;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #btn-submit:hover { background: rgba(35,22,5,0.95); border-color: #8a6030; }
+
+    /* ── Title screen — fullscreen overlay at startup ── */
+    #title-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #title-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      opacity: 0.4;
+    }
+
+    #title-content {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2.5vh;
+      text-align: center;
+      padding: 0 10vw;
+    }
+
+    #title-content h1 {
+      font-family: 'Cinzel', serif;
+      font-weight: 900;
+      font-size: clamp(2rem, 6vw, 6rem);
+      color: #c9b99a;
+      letter-spacing: 0.22em;
+      text-shadow: 0 0 60px rgba(200,160,60,0.5), 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    #title-content p {
+      font-family: 'IM Fell English', serif;
+      color: #7a6a55;
+      font-size: clamp(0.75rem, 1.5vw, 1.1rem);
+      letter-spacing: 0.06em;
+    }
+
+    /* ── BEGIN button pulses to draw attention ── */
+    #btn-start {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(0.75rem, 1.3vw, 1.1rem);
+      letter-spacing: 0.2em;
+      padding: 1.2vh 4vw;
+      background: transparent;
+      color: #c9b99a;
+      border: 1px solid #7a6040;
+      cursor: pointer;
+      margin-top: 1vh;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { border-color:#7a6040; color:#c9b99a; }
+      50%      { border-color:#c9b990; color:#f0e0b0; text-shadow:0 0 14px rgba(220,200,100,0.5); }
+    }
+
+    /* ════════════════════════════════════════════
+       WIN SCREEN — shown when player saves the princess.
+       Displays HOORAY!, the Win_screen.gif, and a
+       message from the princess with the player's name.
+    ════════════════════════════════════════════ */
+    #win-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 20; /* highest layer — covers everything */
+      background: rgba(0,0,0,0.93);
+      display: none; /* hidden until showWinScreen() is called */
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5vh;
+    }
+    #win-screen.visible { display: flex; }
+
+    /* ── HOORAY! heading ── */
+    #win-hooray {
+      font-family: 'Cinzel', serif;
+      font-weight: 900;
+      font-size: clamp(2.5rem, 7vw, 6rem);
+      color: #e8c84a;
+      letter-spacing: 0.25em;
+      text-shadow: 0 0 40px rgba(232,200,74,0.7);
+      text-align: center;
+    }
+
+    /* ── Win image (Win_screen.gif) with glowing border ── */
+    #win-img {
+      width: min(52vw, 400px);
+      border: 2px solid #5a8a5a;
+      border-radius: 10px;
+      animation: winGlow 2s ease-in-out infinite;
+    }
+    @keyframes winGlow {
+      0%,100% { box-shadow: 0 0 18px rgba(100,200,100,0.3); }
+      50%      { box-shadow: 0 0 55px rgba(100,200,100,0.75); }
+    }
+
+    /* ── Princess message line under the image ── */
+    #win-msg {
+      font-family: 'IM Fell English', serif;
+      font-size: clamp(0.9rem, 2vw, 1.4rem);
+      color: #d4a0d4; /* soft purple for princess dialogue */
+      font-style: italic;
+      text-align: center;
+    }
+
+    /* ── Play Again button on win screen ── */
+    #win-play-again {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(0.75rem, 1.3vw, 1.1rem);
+      letter-spacing: 0.2em;
+      padding: 1.2vh 4vw;
+      background: transparent;
+      color: #7db87d;
+      border: 1px solid #7db87d;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #win-play-again:hover { background: rgba(125,184,125,0.15); }
+
+    /* ════════════════════════════════════════════
+       GAME OVER SCREEN — shown when mistakes hit 3.
+       Large pulsing GAME OVER text fills the screen.
+    ════════════════════════════════════════════ */
+    #gameover-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 20; /* same level as win screen */
+      background: rgba(0,0,0,0.96);
+      display: none; /* hidden until triggerGameOver() is called */
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3vh;
+    }
+    #gameover-screen.visible { display: flex; }
+
+    /* ── GAME OVER text — large, dramatic, dark red, pulsing ── */
+    #gameover-title {
+      font-family: 'Cinzel', serif;
+      font-weight: 900;
+      font-size: clamp(3.5rem, 10vw, 9rem); /* huge on all screen sizes */
+      color: #8a1a1a;
+      letter-spacing: 0.18em;
+      text-align: center;
+      line-height: 1.1;
+      animation: gameOverPulse 2.5s ease-in-out infinite;
+    }
+    /* Pulsing red glow makes it feel ominous */
+    @keyframes gameOverPulse {
+      0%,100% { text-shadow: 0 0 30px rgba(180,30,30,0.4); }
+      50%      { text-shadow: 0 0 80px rgba(220,40,40,0.9), 0 0 20px rgba(255,60,60,0.6); }
+    }
+
+    /* ── Rat's farewell quote under the game over title ── */
+    #gameover-quote {
+      font-family: 'IM Fell English', serif;
+      font-size: clamp(0.85rem, 1.8vw, 1.2rem);
+      color: #7a4a4a;
+      font-style: italic;
+      text-align: center;
+    }
+
+    /* ── Restart and Quit buttons on game over screen ── */
+    .gameover-btn {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(0.75rem, 1.3vw, 1.1rem);
+      letter-spacing: 0.2em;
+      padding: 1.2vh 4vw;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .gameover-btn.restart { color: #c9b99a; border: 1px solid #5a4a30; }
+    .gameover-btn.restart:hover { border-color: #8a6030; color: #f0e0b0; }
+    .gameover-btn.quit    { color: #8a3a3a; border: 1px solid #5a2020; }
+    .gameover-btn.quit:hover { border-color: #b85c5c; color: #c05c5c; }
+  </style>
+</head>
+<body>
+<div id="game">
+
+  <!-- Background scene image — swapped by JS on each scene change -->
+  <img id="scene-img" src="Castle.gif" alt="Scene" />
+
+  <!-- Dark gradient vignette layered over the scene -->
+  <div id="vignette"></div>
+
+  <!-- The rat character — moved around by the rat engine in JS -->
+  <img id="rat" src="Rat.gif" alt="Rat" />
+
+  <!-- Speech bubble that floats above the rat -->
+  <div id="speech-bubble"></div>
+
+  <!-- HUD: player name, key dots, skull dots -->
+  <div id="hud">
+    <div id="hud-name">KNIGHT: <span id="pname">—</span></div>
+    <div class="hud-group">KEYS &nbsp;<span id="key-icons"></span></div>
+    <div class="hud-group">LIVES &nbsp;<span id="skull-icons"></span></div>
+  </div>
+
+  <!-- Room name label that fades in at the top on scene change -->
+  <div id="room-label"></div>
+
+  <!-- Bottom dialogue panel: story text, action buttons, text input -->
+  <div id="dialogue-box">
+    <div id="text-log"></div>
+    <div id="btn-area"></div>
+    <div id="input-area" style="display:none">
+      <input type="text" id="player-input" placeholder="Type your answer..." autocomplete="off" />
+      <button id="btn-submit" onclick="handleInput()">↵ ENTER</button>
+    </div>
+  </div>
+
+  <!-- Black flash overlay used during scene transitions -->
+  <div id="flash"></div>
+
+  <!-- Title screen — shown at startup, hidden when BEGIN is clicked -->
+  <div id="title-screen">
+    <img id="title-bg" src="Castle.gif" alt="Castle" />
+    <div id="title-content">
+      <h1>CASTLE ESCAPE</h1>
+      <p>Solve the riddles. Collect the keys. Save the princess.</p>
+      <button id="btn-start" onclick="startGame()">▶ &nbsp; BEGIN</button>
+    </div>
+  </div>
+
+  <!-- Win screen — shown when player answers the final riddle correctly -->
+  <div id="win-screen">
+    <div id="win-hooray">HOORAY!</div>
+    <img id="win-img" src="Win_screen.gif" alt="You Win!" />
+    <div id="win-msg"></div>
+    <button id="win-play-again" onclick="resetGame()">↺ &nbsp; PLAY AGAIN</button>
+  </div>
+
+  <!-- Game Over screen — shown when the player makes 3 mistakes -->
+  <div id="gameover-screen">
+    <div id="gameover-title">GAME OVER</div>
+    <div id="gameover-quote"></div>
+    <button class="gameover-btn restart" onclick="resetGame()">↺ &nbsp; RESTART</button>
+    <button class="gameover-btn quit"    onclick="quitGame()">✕ &nbsp; QUIT</button>
+  </div>
+
+</div>
+
+<script>
+  /* ════════════════════════════════════════════
+     GAME STATE — variables that track everything
+     happening right now in the game
+  ════════════════════════════════════════════ */
+  var playerName    = "";       // name the player typed in
+  var mistakes      = 0;        // wrong answers so far (max 3)
+  var puzzlesSolved = 0;        // rooms cleared
+  var keys          = 0;        // keys collected (one per puzzle)
+  var MAX_MISTAKES  = 3;        // lose if this many mistakes
+  var TOTAL_PUZZLES = 6;        // need this many keys to win
+  var phase         = "title";  // current game state
+  var currentRoom   = null;     // which room the player is in
+  var currentRiddle = null;     // which riddle is active
+  var solvedRooms   = {};       // tracks which rooms are already cleared
+
+  /* ════════════════════════════════════════════
+     SCENE DATA — maps each scene key to its image file
+  ════════════════════════════════════════════ */
+  var SCENES = {
+    start:   "Starting_Room.gif",
+    hallway: "Hallway.gif",
+    room1:   "Room1.gif",
+    room2:   "Room2.gif",
+    room3:   "Room3.gif",
+    room4:   "Room4.gif",
+    room5:   "Room5.gif",
+    room6:   "Room6.gif",
+    final:   "Final_Room.gif"
+  };
+
+  /* ════════════════════════════════════════════
+     ROOM DATA — the six puzzle rooms in the hallway.
+     Each has a name, display label, scene key, and
+     which riddle index it uses from the RIDDLES array.
+  ════════════════════════════════════════════ */
+  var ROOMS = [
+    {name:"room1", label:"Room 1 — Right", scene:"room1", riddleIndex:0},
+    {name:"room2", label:"Room 2 — Left",  scene:"room2", riddleIndex:1},
+    {name:"room3", label:"Room 3 — Right", scene:"room3", riddleIndex:2},
+    {name:"room4", label:"Room 4 — Left",  scene:"room4", riddleIndex:3},
+    {name:"room5", label:"Room 5 — Right", scene:"room5", riddleIndex:4},
+    {name:"room6", label:"Room 6 — Left",  scene:"room6", riddleIndex:5}
+  ];
+
+  /* ════════════════════════════════════════════
+     RIDDLE DATA — questions, correct answers, and
+     hint information shown when player types HINT
+  ════════════════════════════════════════════ */
+  var RIDDLES = [
+    {
+      question: "I speak without a mouth and hear without ears. What am I?",
+      answer:   "echo",
+      hint: { first:"e", last:"o", length:4, choices:"A) echo   B) voice   C) sound" }
+    },
+    {
+      question: "The more you take, the more you leave behind. What are they?",
+      answer:   "footsteps",
+      hint: { first:"f", last:"s", length:9, choices:"A) shadows   B) footsteps   C) marks" }
+    },
+    {
+      question: "I have one eye but am unable to see. What am I?",
+      answer:   "needle",
+      hint: { first:"n", last:"e", length:6, choices:"A) blind cyclops   B) the alphabet   C) needle" }
+    },
+    {
+      question: "What goes through cities and fields, but never moves?",
+      answer:   "road",
+      hint: { first:"r", last:"d", length:4, choices:"A) river   B) road   C) wind" }
+    },
+    {
+      question: "What starts with T, ends with T, and has T in it?",
+      answer:   "teapot",
+      hint: { first:"t", last:"t", length:6, choices:"A) teapot   B) toilet   C) testament" }
+    },
+    {
+      question: "What has to be broken before you can use it?",
+      answer:   "egg",
+      hint: { first:"e", last:"g", length:3, choices:"A) glass   B) egg   C) stone" }
+    }
+  ];
+
+  /* ════════════════════════════════════════════
+     RAT ENGINE — handles all rat movement,
+     animations, and the speech bubble
+  ════════════════════════════════════════════ */
+  var rat    = document.getElementById("rat");
+  var bubble = document.getElementById("speech-bubble");
+
+  // Rat position and movement state
+  var ratVisible    = false; // is the rat on screen?
+  var ratX          = -10;   // current horizontal position (% of screen)
+  var ratTarget     = -10;   // destination position
+  var ratSpeed      = 0.5;   // movement speed per frame (lower = slower)
+  var ratBobY       = 0;     // vertical bounce offset
+  var ratBobDir     = 1;     // bounce direction (1 up, -1 down)
+  var ratAnimId     = null;  // animation frame ID (used to cancel)
+  var onReachTarget = null;  // callback fired when rat reaches its target
+  var pacingInterval= null;  // interval ID for the back-and-forth pacing loop
+
+  /* ratLoop — runs every animation frame while the rat is visible.
+     Steps the rat toward its target and applies a walking bob. */
+  function ratLoop() {
+    if (!ratVisible) return;
+    var dx = ratTarget - ratX; // remaining distance
+
+    if (Math.abs(dx) > 0.3) {
+      // Still moving — advance and bounce
+      ratX += (dx > 0 ? 1 : -1) * Math.min(ratSpeed, Math.abs(dx));
+      ratBobY += ratBobDir * 1.1;
+      if (ratBobY >= 11 || ratBobY <= 0) ratBobDir *= -1;
+    } else {
+      // Arrived at target — slow the bob and fire the callback
+      ratX = ratTarget;
+      ratBobY += ratBobDir * 0.5;
+      if (ratBobY >= 8 || ratBobY <= 0) ratBobDir *= -1;
+      if (onReachTarget) { var cb = onReachTarget; onReachTarget = null; cb(); }
+    }
+
+    // Flip sprite horizontally when moving left
+    if (!rat.classList.contains("angry") && !rat.classList.contains("happy")) {
+      rat.style.transform = (dx < -0.5)
+        ? "scaleX(-1) translateY(-" + ratBobY.toFixed(1) + "px)"
+        : "translateY(-" + ratBobY.toFixed(1) + "px)";
+    }
+
+    // Update position and keep speech bubble above the rat
+    rat.style.left = ratX + "%";
+    if (bubble.classList.contains("visible"))
+      bubble.style.left = Math.min(ratX + 12, 58) + "%";
+
+    ratAnimId = requestAnimationFrame(ratLoop); // schedule next frame
+  }
+
+  /* ratShow — makes the rat visible at starting X position sx */
+  function ratShow(sx) {
+    ratVisible = true;
+    ratX = sx !== undefined ? sx : -15;
+    rat.style.left    = ratX + "%";
+    rat.style.bottom  = "22%";
+    rat.style.display = "block";
+    rat.className     = "";
+    rat.style.transform = "";
+    if (ratAnimId) cancelAnimationFrame(ratAnimId); // cancel any old loop
+    ratAnimId = requestAnimationFrame(ratLoop);      // start fresh
+  }
+
+  /* ratMoveTo — moves rat to position tx at speed spd, fires cb on arrival */
+  function ratMoveTo(tx, spd, cb) {
+    ratSpeed      = spd || 0.35;
+    ratTarget     = tx;
+    onReachTarget = cb || null;
+    if (!rat.classList.contains("angry") && !rat.classList.contains("happy"))
+      rat.className = "";
+  }
+
+  /* ratHide — rat walks off the RIGHT side of the screen and disappears */
+  function ratHide(cb) {
+    ratSpeed  = 0.9;
+    ratTarget = 115; // past the right edge
+    onReachTarget = function() {
+      ratVisible = false;
+      rat.style.display = "none";
+      rat.className = "";
+      bubble.classList.remove("visible");
+      if (cb) cb();
+    };
+  }
+
+  /* ratHideLeft — rat walks off the LEFT side of the screen and disappears */
+  function ratHideLeft(cb) {
+    ratSpeed  = 0.9;
+    ratTarget = -18; // past the left edge
+    onReachTarget = function() {
+      ratVisible = false;
+      rat.style.display = "none";
+      rat.className = "";
+      bubble.classList.remove("visible");
+      if (cb) cb();
+    };
+  }
+
+  /* ratSay — shows the speech bubble with text t above the rat */
+  function ratSay(t) {
+    bubble.textContent = t;
+    bubble.style.left   = Math.min(ratX + 12, 58) + "%";
+    bubble.style.bottom = "44%";
+    bubble.classList.add("visible");
+  }
+
+  /* ratSilent — hides the speech bubble */
+  function ratSilent() { bubble.classList.remove("visible"); }
+
+  /* startRatPacing — makes the rat walk back and forth automatically
+     while the player thinks during a riddle */
+  function startRatPacing() {
+    stopRatPacing();
+    ratMoveTo(62, 0.22); // start by walking right
+    pacingInterval = setInterval(function() {
+      if (!ratVisible) return;
+      if      (ratX >= 61) ratMoveTo(18, 0.22); // reached right side, go left
+      else if (ratX <= 19) ratMoveTo(62, 0.22); // reached left side, go right
+    }, 3500);
+  }
+
+  /* stopRatPacing — clears the pacing interval */
+  function stopRatPacing() {
+    if (pacingInterval) { clearInterval(pacingInterval); pacingInterval = null; }
+  }
+
+  /* ════════════════════════════════════════════
+     SCENE CHANGE — fades to black, swaps the
+     background image, then fades back in
+  ════════════════════════════════════════════ */
+  function changeScene(key, label, cb) {
+    var fl = document.getElementById("flash");
+    var rl = document.getElementById("room-label");
+    fl.classList.add("on");           // fade to black
+    rl.classList.remove("visible");
+    setTimeout(function() {
+      document.getElementById("scene-img").src = SCENES[key]; // swap image
+      if (label) { rl.textContent = label; rl.classList.add("visible"); }
+      fl.classList.remove("on");      // fade back in
+      if (cb) setTimeout(cb, 300);
+    }, 280);
+  }
+
+  /* ════════════════════════════════════════════
+     LOG — adds text to the dialogue box.
+     Only keeps the last 3 lines visible.
+  ════════════════════════════════════════════ */
+  function log(text, cls) {
+    var tl = document.getElementById("text-log");
+    var p  = document.createElement("p");
+    p.innerHTML = text;
+    if (cls) p.className = cls;
+    tl.appendChild(p);
+    while (tl.children.length > 3) tl.removeChild(tl.firstChild); // trim old lines
+  }
+
+  /* clearLog — removes all lines from the dialogue box */
+  function clearLog() { document.getElementById("text-log").innerHTML = ""; }
+
+  /* ════════════════════════════════════════════
+     BUTTONS & INPUT HELPERS
+  ════════════════════════════════════════════ */
+
+  /* showButtons — replaces the button area with a new set */
+  function showButtons(arr) {
+    document.getElementById("input-area").style.display = "none";
+    var area = document.getElementById("btn-area");
+    area.innerHTML = "";
+    arr.forEach(function(b) {
+      var btn       = document.createElement("button");
+      btn.className = "btn" + (b.cls ? " " + b.cls : "");
+      btn.textContent = b.label;
+      btn.onclick   = b.action;
+      area.appendChild(btn);
+    });
+  }
+
+  /* showInput — hides buttons and shows the text input */
+  function showInput(ph) {
+    document.getElementById("btn-area").innerHTML = "";
+    var ia  = document.getElementById("input-area");
+    var inp = document.getElementById("player-input");
+    ia.style.display = "flex";
+    inp.value       = "";
+    inp.placeholder = ph || "Type here...";
+    inp.focus(); // auto-focus so player can type straight away
+  }
+
+  /* hideInput — hides the text input field */
+  function hideInput() { document.getElementById("input-area").style.display = "none"; }
+
+  /* ════════════════════════════════════════════
+     HUD UPDATE — refreshes the key dots, skull
+     dots, and player name in the top bar
+  ════════════════════════════════════════════ */
+  function updateStats() {
+    var kh = "", sh = "";
+    // Build filled/empty dot HTML for keys
+    for (var i = 0; i < TOTAL_PUZZLES; i++)
+      kh += '<span class="dot' + (i < keys     ? " key-on"   : "") + '"></span>';
+    // Build filled/empty dot HTML for mistakes (skulls)
+    for (var j = 0; j < MAX_MISTAKES; j++)
+      sh += '<span class="dot' + (j < mistakes ? " skull-on" : "") + '"></span>';
+    document.getElementById("key-icons").innerHTML   = kh;
+    document.getElementById("skull-icons").innerHTML = sh;
+    document.getElementById("pname").textContent     = playerName || "—";
+  }
+
+  /* Listen for Enter key inside the text input */
+  document.getElementById("player-input").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") handleInput();
+  });
+
+  /* handleInput — reads the input and routes to the correct handler
+     based on which phase the game is currently in */
+  function handleInput() {
+    var val = document.getElementById("player-input").value.trim().toLowerCase();
+    document.getElementById("player-input").value = "";
+    if      (phase === "nameEntry")   handleNameEntry(val);
+    else if (phase === "riddle")      handleRiddleAnswer(val);
+    else if (phase === "hintWait")    handleRiddleAnswer(val);
+    else if (phase === "finalAnswer") handleFinalAnswer(val);
+  }
+
+  /* ════════════════════════════════════════════
+     GAME FLOW
+  ════════════════════════════════════════════ */
+
+  /* startGame — hides the title screen and begins the intro scene */
+  function startGame() {
+    document.getElementById("title-screen").style.display = "none";
+    clearLog();
+    changeScene("start", "", function() {
+      log("The night was supposed to be simple...");
+      log("BOOM. You wake in a cold dark castle.", "system");
+      setTimeout(function() {
+        // Rat walks in from the left at a natural pace (speed 0.35)
+        ratShow(-15);
+        ratMoveTo(35, 0.5, function() {
+          ratSay("Solve my puzzles or stay forever.");
+          log('"Solve my puzzles, knight, or stay here forever."', "rat-text");
+          showButtons([{label:"▶  Continue", action: goToNameEntry}]);
+        });
+      }, 600);
+    });
+  }
+
+  /* goToNameEntry — rat moves a little then asks for the player's name */
+  function goToNameEntry() {
+    ratSilent();
+    ratMoveTo(42, 0.3, function() {
+      ratSay("What is your name?");
+      clearLog();
+      log("What is your name, knight?");
+      phase = "nameEntry";
+      showInput("Enter your name...");
+    });
+  }
+
+  /* handleNameEntry — saves the name and moves to the hallway */
+  function handleNameEntry(val) {
+    playerName = val === "" ? "Nameless One" : val;
+    updateStats(); // put the name in the HUD
+    ratSilent();
+    rat.className = "happy"; // rat does a happy spin
+    ratSay("Welcome, " + playerName + "!");
+    clearLog();
+    log('"Welcome, ' + playerName + '." the rat hisses.', "rat-text");
+    setTimeout(function() {
+      ratSilent();
+      rat.className = "";
+      ratHide(function() {
+        // Rat has left — show the door button
+        clearLog();
+        log("You stand in the room you woke up in.", "system");
+        log("A door ahead leads to the hallway.");
+        showButtons([{label:"▶  Exit through the door", action: goToHallway}]);
+      });
+    }, 2000);
+  }
+
+  /* goToHallway — transitions to the hallway and shows the room buttons.
+     RAT FIX: rat is hidden immediately on entry instead of flying across. */
+  function goToHallway() {
+    phase = "hallway";
+    changeScene("hallway", "THE HALLWAY", function() {
+      clearLog();
+
+      /* ── RAT FIX ──────────────────────────────────────────────────
+         Original code spawned the rat at 108% and sent it flying
+         left at speed 0.75 — it zipped across the whole hallway.
+         Fix: hide the rat immediately when entering the hallway.
+         The rat only appears when the player enters a puzzle room.
+      ────────────────────────────────────────────────────────────── */
+      ratVisible = false;
+      rat.style.display = "none";
+      bubble.classList.remove("visible");
+
+      // Show hallway status
+      log("Three doors on each side. One locked door at the end.");
+      if (puzzlesSolved >= TOTAL_PUZZLES)
+        log("You have all the keys. The final door awaits.", "good");
+      else
+        log("Keys needed: " + puzzlesSolved + " / " + TOTAL_PUZZLES, "system");
+
+      // Create one button per room — add a checkmark if already solved
+      var btns = ROOMS.map(function(r) {
+        var done = solvedRooms[r.name] ? " ✓" : "";
+        return { label: r.label + done, action: (function(room){ return function(){ enterRoom(room); }; })(r) };
+      });
+
+      // Add the Final Door button once all puzzles are done
+      if (puzzlesSolved >= TOTAL_PUZZLES)
+        btns.push({label:"⚑  Final Door", action: goToFinal, cls:"highlight"});
+
+      showButtons(btns);
+    });
+  }
+
+  /* enterRoom — player enters a puzzle room.
+     The rat walks in from the right with a two-step movement:
+     fast approach then slow settle, matching the intro feel. */
+  function enterRoom(room) {
+    currentRoom = room;
+    phase = "room";
+    changeScene(room.scene, room.label.toUpperCase(), function() {
+      clearLog();
+      log("You step into " + room.label + ".");
+
+      // If already cleared, just show the back button
+      if (solvedRooms[room.name]) {
+        log("This room is already cleared.", "good");
+        showButtons([{label:"◀  Back to Hallway", action: goToHallway}]);
+        return;
+      }
+
+      setTimeout(function() {
+        ratShow(108);                       // spawn off the right edge
+        ratMoveTo(55, 0.55, function() {    // walk to middle at normal speed
+          ratMoveTo(38, 0.35, function() {  // slow down to settle into position
+            ratSay("Answer my riddle!");
+            log('"You dare enter? Answer my riddle!"', "rat-text");
+            showButtons([
+              {label:"▶  Face the Riddle", action: function(){ askRiddle(room); }},
+              {label:"◀  Back to Hallway", action: function(){ ratSilent(); ratHide(goToHallway); }}
+            ]);
+          });
+        });
+      }, 400);
+    });
+  }
+
+  /* askRiddle — shows the riddle and starts the rat pacing */
+  function askRiddle(room) {
+    phase = "riddle";
+    currentRiddle = RIDDLES[room.riddleIndex];
+    ratSilent();
+    startRatPacing(); // rat paces nervously while player thinks
+    clearLog();
+    log(currentRiddle.question, "rat-text");
+    log("Type your answer — or type HINT for a clue.", "system");
+    showInput("Your answer...");
+  }
+
+  /* handleRiddleAnswer — checks the answer and reacts accordingly */
+  function handleRiddleAnswer(val) {
+    // If player typed HINT, show a clue instead of checking the answer
+    if (val === "hint" && phase === "riddle") { giveHint(currentRiddle); return; }
+
+    stopRatPacing(); // stop pacing while we process
+
+    if (val === currentRiddle.answer) {
+      /* ── CORRECT ── */
+      ratMoveTo(38, 0.4, function() {
+        ratSilent();
+        rat.className = "happy"; // rat spins in defeat
+        ratSay("Argh! Correct...");
+        clearLog();
+        log("Correct!", "good");
+        log("The rat drops a key at your feet.", "rat-text");
+        puzzlesSolved++;
+        keys++;
+        solvedRooms[currentRoom.name] = true; // mark room as cleared
+        updateStats();
+        log("Keys: " + keys + " / " + TOTAL_PUZZLES, "system");
+        hideInput();
+        setTimeout(function() {
+          ratSilent(); rat.className = "";
+          ratHide(function() {
+            showButtons([{label:"◀  Back to Hallway", action: goToHallway}]);
+          });
+        }, 2200);
+      });
+
+    } else {
+      /* ── WRONG ── */
+      mistakes++;
+      updateStats(); // fill in another skull dot
+      ratMoveTo(8, 0.8, function() {
+        rat.className = "angry"; // rat jumps angrily
+        ratSay("WRONG!");
+        clearLog();
+        log("Wrong.", "bad");
+
+        // Escalating warning messages based on mistake count
+        if      (mistakes === 1) log('"Careful, knight..."', "rat-text");
+        else if (mistakes === 2) log('"One more mistake and you are MINE."', "rat-text");
+
+        if (mistakes >= MAX_MISTAKES) {
+          setTimeout(triggerGameOver, 1200); // no lives left — game over
+        } else {
+          setTimeout(function() {
+            ratSilent(); rat.className = "";
+            ratMoveTo(40, 0.25);
+            startRatPacing();
+            clearLog();
+            log(currentRiddle.question, "rat-text");
+            log("Try again.", "system");
+            showInput("Your answer...");
+          }, 1400);
+        }
+      });
+    }
+  }
+
+  /* giveHint — shows the first/last letter, length, and multiple choice */
+  function giveHint(riddle) {
+    phase = "hintWait"; // so Enter still routes to handleRiddleAnswer
+    stopRatPacing();
+    ratSilent();
+    ratMoveTo(5, 0.4, function() {
+      ratSay("Here is a clue...");
+      clearLog();
+      log("Starts with <b>" + riddle.hint.first + "</b> — Ends with <b>" + riddle.hint.last + "</b> — Length: <b>" + riddle.hint.length + "</b>");
+      log(riddle.hint.choices, "system");
+      setTimeout(function() {
+        ratSilent();
+        ratSay("Now answer!");
+        showInput("Your answer...");
+      }, 1500);
+    });
+  }
+
+  /* goToFinal — enters the final room where the princess is held */
+  function goToFinal() {
+    phase = "final";
+    changeScene("final", "FINAL ROOM", function() {
+      clearLog();
+      log("The princess is chained behind bars.");
+      log("You use your " + keys + " keys... The lock clicks open.");
+      setTimeout(function() {
+        // Rat drops in from above and slides down to the floor
+        rat.style.bottom = "65%";
+        ratShow(50);
+        setTimeout(function() {
+          rat.style.transition = "bottom 0.5s ease";
+          rat.style.bottom = "22%";
+          setTimeout(function() {
+            rat.style.transition = "";
+            ratSay("One last question...");
+            clearLog();
+            log('"One final question — What is 2 + 2?"', "rat-text");
+            phase = "finalAnswer";
+            showInput("Your answer...");
+          }, 600);
+        }, 200);
+      }, 800);
+    });
+  }
+
+  /* handleFinalAnswer — checks the final riddle and triggers win or wrong */
+  function handleFinalAnswer(val) {
+    if (val === "4") {
+      /* ── CORRECT — player wins! ── */
+      rat.className = "angry";
+      ratSay("NOOOO!");
+      setTimeout(function() {
+        ratHideLeft(function() {
+          showWinScreen(); // rat flees — show the win screen
+        });
+      }, 1200);
+    } else {
+      /* ── WRONG ── */
+      mistakes++;
+      updateStats();
+      ratMoveTo(8, 0.8, function() {
+        rat.className = "angry"; ratSay("WRONG!");
+        clearLog();
+        log("Wrong...", "bad");
+        if (mistakes >= MAX_MISTAKES) {
+          setTimeout(triggerGameOver, 1200);
+        } else {
+          setTimeout(function() {
+            ratSilent(); rat.className = ""; ratMoveTo(50, 0.3);
+            clearLog();
+            log('"What is 2 + 2?"', "rat-text");
+            showInput("Your answer...");
+          }, 1400);
+        }
+      });
+    }
+  }
+
+  /* ════════════════════════════════════════════
+     WIN SCREEN — displays the win image and
+     a personalised princess message
+  ════════════════════════════════════════════ */
+  function showWinScreen() {
+    clearLog();
+    hideInput();
+    document.getElementById("btn-area").innerHTML = "";
+    // Personalise the princess message with the player's name
+    document.getElementById("win-msg").textContent =
+      '"' + playerName + '! You saved me!" — The Princess';
+    // Show the win overlay
+    document.getElementById("win-screen").classList.add("visible");
+  }
+
+  /* ════════════════════════════════════════════
+     GAME OVER SCREEN — shows large GAME OVER text
+     and the rat's personalised farewell line
+  ════════════════════════════════════════════ */
+  function triggerGameOver() {
+    phase = "gameOver";
+    stopRatPacing();
+    // Hide the rat before showing the overlay
+    ratVisible = false;
+    rat.style.display = "none";
+    bubble.classList.remove("visible");
+    // Personalise the rat's quote with the player's name
+    document.getElementById("gameover-quote").textContent =
+      '"You have failed me, ' + playerName + '." — The Rat';
+    // Show the game over overlay
+    document.getElementById("gameover-screen").classList.add("visible");
+  }
+
+  /* quitGame — closes game over screen and shows a simple end message */
+  function quitGame() {
+    document.getElementById("gameover-screen").classList.remove("visible");
+    clearLog();
+    log("Game Over.", "bad");
+    hideInput();
+    showButtons([{label:"▶  Play Again", action: resetGame}]);
+  }
+
+  /* ════════════════════════════════════════════
+     RESET — sets everything back to zero and
+     restarts the game from the beginning
+  ════════════════════════════════════════════ */
+  function resetGame() {
+    stopRatPacing();
+
+    // Reset all game state variables to their starting values
+    mistakes      = 0;
+    puzzlesSolved = 0;
+    keys          = 0;
+    playerName    = "";
+    currentRoom   = null;
+    currentRiddle = null;
+    solvedRooms   = {};
+
+    // Reset and hide the rat
+    ratVisible = false;
+    rat.style.display = "none";
+    rat.className = "";
+    rat.style.bottom = "22%";
+    bubble.classList.remove("visible");
+
+    // Hide room label and any end screens
+    document.getElementById("room-label").classList.remove("visible");
+    document.getElementById("win-screen").classList.remove("visible");
+    document.getElementById("gameover-screen").classList.remove("visible");
+
+    updateStats(); // reset HUD dots back to empty
+    clearLog();
+    startGame();   // restart from the intro
+  }
+
+  /* ── Initialise HUD dots on page load ── */
+  updateStats();
+</script>
+</body>
+</html>
